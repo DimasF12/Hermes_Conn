@@ -1,0 +1,10 @@
+// tsconfig for ts-node CommonJS
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true
+  }
+}

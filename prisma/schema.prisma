@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// TABEL 1: BRIEFING EDITIONS (Header per edisi harian)
+// ============================================================
+model BriefingEdition {
+  id            String   @id                    // e.g. "edition-2026-10-01"
+  schemaVersion Int      @default(1) @map("schema_version")
+  status        String   @default("approved")   // draft | approved | archived
+
+  // Meta fields
+  title         String
+  subtitle      String?
+  eyebrow       String?
+  editionDate   String   @map("edition_date")   // "30 September 2026"
+  dataAsOf      String?  @map("data_as_of")     // "29 SEP"
+  state         String?                          // "Approved edition"
+  sourceLabel   String?  @map("source_label")
+  sourceNote    String?  @map("source_note")
+  featuredId    String?  @map("featured_id")    // ID sinyal yang difeatured
+
+  // JSONB: contributing bots metadata
+  contributingBots Json? @map("contributing_bots")
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt      @map("updated_at")
+
+  // Relasi
+  signals       Signal[]
+
+  @@map("briefing_editions")
+}
+
+// ============================================================
+// TABEL 2: SIGNALS (Data sinyal per edisi)
+// ============================================================
+model Signal {
+  // === IDENTITAS ===
+  id          String @id             // e.g. "sig-01" atau "commercial-contractor-shift"
+  editionId   String @map("edition_id")
+
+  // === DARI main (Kolom terstruktur — sering di-query & difilter) ===
+  botName     String? @map("bot_name")            // "Hermes News Intelligence"
+  category    String                              // "Regulasi" | "Komersial" | dll
+  priority    String                              // "HIGH" | "MEDIUM" | "LOW"
+  title       String
+  summary     String
+
+  // JSONB — opsional & strukturnya tetap
+  metric      Json?                               // { value, label, unit? }
+  action      Json                                // { task, owner, deadline? }
+  sources     Json?                               // [{ name, url, date? }]
+
+  // Array string native PostgreSQL
+  evidence    String[]
+
+  // === DARI presentation ===
+  visual      Json?    // { type: "comparison"|"distribution"|"facts", title, items[], unit?, note? }
+
+  // === DARI extensions (domain-specific sandbox) ===
+  extensions  Json?    // Atribut bebas — tidak perlu schema migration saat bot baru
+
+  // === METADATA TAMBAHAN (hasil normalisasi ingest adapter) ===
+  tone        String?  // "emerald" | "blue" | "amber" | "neutral" (auto-derived dari priority)
+  signalStatus String? @map("signal_status") // "Immediate" | "Attention" | "Opportunity" | "Watch"
+  dataAsOf    String?  @map("data_as_of")
+
+  // JSONB: bot metadata lengkap
+  bot         Json?
+
+  // Tags
+  tags        String[]
+
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relasi
+  edition     BriefingEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  @@index([editionId])
+  @@index([category])
+  @@index([priority])
+  @@map("signals")
+}

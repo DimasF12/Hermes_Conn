@@ -1,68 +1,108 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useReports } from '@/hooks/useReports';
+import { Sidebar, NavigationMenuId } from '@/components/layout/Sidebar';
+import { ReportTopbar } from '@/components/viewer/ReportTopbar';
+import { ReportCanvas } from '@/components/viewer/ReportCanvas';
+import { ChatbotView } from '@/components/modules/ChatbotView';
+import { TokenConfigView } from '@/components/modules/TokenConfigView';
+import { UserTrafficView } from '@/components/modules/UserTrafficView';
+
+export default function CommandCenterPage() {
+  const { reports, selectedReport, setSelectedFile, isLoading, error, refresh } = useReports();
+
+  const [activeMenu, setActiveMenu] = useState<NavigationMenuId>('reports');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+
+  const shellRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Synchronize state when user exits fullscreen via Esc key
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const enterFullscreen = useCallback(async () => {
+    try {
+      await shellRef.current?.requestFullscreen();
+    } catch {
+      // Browser denied fullscreen without user gesture — ignore
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(async () => {
+    if (document.fullscreenElement) await document.exitFullscreen();
+  }, []);
+
+  const printReport = useCallback(() => {
+    iframeRef.current?.contentWindow?.print();
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div ref={shellRef} className={`command-center-app ${isFullscreen ? 'is-fullscreen' : ''}`}>
+      {/* SIDEBAR NAVIGATION (Hidden in Fullscreen) */}
+      {!isFullscreen && (
+        <Sidebar
+          activeMenu={activeMenu}
+          onSelectMenu={setActiveMenu}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+          reportsCount={reports.length}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      )}
+
+      {/* MAIN VIEWPORT / WORKSPACE */}
+      <main className="main-viewport">
+        {/* VIEW 1: INTELLIGENCE REPORTS (CANVAS) */}
+        {activeMenu === 'reports' && (
+          <div className="viewer-shell">
+            {!isFullscreen && (
+              <ReportTopbar
+                reports={reports}
+                selectedReport={selectedReport}
+                onSelect={setSelectedFile}
+                isRefreshing={isLoading}
+                onRefresh={refresh}
+                onPrint={printReport}
+                onFullscreen={enterFullscreen}
+              />
+            )}
+
+            {error && (
+              <div className="viewer-error" role="alert">
+                Failed to load reports catalog ({error}).
+                <button className="btn btn-quiet" onClick={refresh}>Try again</button>
+              </div>
+            )}
+
+            {isLoading && reports.length === 0 ? (
+              <div className="viewer-loader is-standalone" role="status">
+                <span className="viewer-loader-bar" />
+                <span>Scanning report directory…</span>
+              </div>
+            ) : (
+              <ReportCanvas
+                ref={iframeRef}
+                report={selectedReport}
+                isFullscreen={isFullscreen}
+                onExitFullscreen={exitFullscreen}
+              />
+            )}
+          </div>
+        )}
+
+        {/* VIEW 2: AI EXECUTIVE CHATBOT */}
+        {activeMenu === 'chat' && <ChatbotView />}
+
+        {/* VIEW 3: AI TOKEN CONFIGURATION */}
+        {activeMenu === 'tokens' && <TokenConfigView />}
+
+        {/* VIEW 4: USER TRAFFIC ANALYTICS */}
+        {activeMenu === 'traffic' && <UserTrafficView />}
       </main>
     </div>
   );

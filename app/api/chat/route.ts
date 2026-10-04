@@ -73,6 +73,11 @@ export async function POST(req: Request) {
       content: message,
     });
 
+    const apiKey =
+      process.env.HERMES_API_KEY ||
+      process.env.API_SERVER_KEY ||
+      'change-me-local-dev';
+
     // 3. Send HTTP POST to Hermes API
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
@@ -83,7 +88,7 @@ export async function POST(req: Request) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(process.env.HERMES_API_KEY ? { Authorization: `Bearer ${process.env.HERMES_API_KEY}` } : {}),
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: hermesModel,

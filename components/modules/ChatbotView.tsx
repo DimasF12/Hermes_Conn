@@ -22,7 +22,7 @@ export function ChatbotView() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputQuery).trim();
     if (!query) return;
 
@@ -37,27 +37,45 @@ export function ChatbotView() {
     setInputQuery('');
     setIsTyping(true);
 
-    // Simulate AI response synthesis
-    setTimeout(() => {
-      let aiResponseText = `Thank you for your inquiry. Analyzing indexed C-Level intelligence for: **"${query}"**.\n\n• **Core Finding:** Cross-referencing our primary intelligence feeds confirms this observation has high operational correlation across regional sales branches.\n• **Executive Recommendation:** Proceed with phased mitigation, schedule an alignment sync with Directorate Heads, and verify the evidence baseline.\n• **Timeline Checkpoint:** Target closure prior to month-end board review.`;
+    // Send real-time request to Next.js /api/chat (Hermes API Gateway)
+    try {
+      const historyPayload = messages.map(m => ({
+        sender: m.sender,
+        text: m.text,
+      }));
 
-      if (query.toLowerCase().includes('risk') || query.toLowerCase().includes('3')) {
-        aiResponseText = `Here is the synthesized **Top 3 Risk Assessment** from our latest briefings:\n\n1. **Regulatory Wheeling Squeeze (High Risk):** Revised transmission formulas project a -8.4% margin contraction on private joint ventures.\n2. **Tender Compliance Deadlines (Medium Risk):** Central Java solar farm procurement requirements shift technical qualification windows.\n3. **Foreign Exchange Headwind (Watch):** Strengthening USD impacts import capital equipment cost curves by approximately +3.8%.`;
-      } else if (query.toLowerCase().includes('memo') || query.toLowerCase().includes('board')) {
-        aiResponseText = `**MEMORANDUM FOR THE BOARD OF DIRECTORS**\n**Date:** October 04, 2026\n**Subject:** Executive Intelligence Synthesis & Action Priorities\n\n• **Summary:** Commercial signals indicate stable demand (+12% YoY) alongside localized regulatory margin pressure in utility-scale partnerships.\n• **Recommended Decision:** Authorize Legal & Strategy to invoke grandfathering clauses under MEMR No. 14/2026 before November 15.\n• **Capital Allocation:** Reserve contingency buffer of USD 1.2M for tariff adjustments.`;
-      }
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: query,
+          history: historyPayload,
+        }),
+      });
+
+      const data = await res.json();
 
       const assistantMessage: ChatMessage = {
         id: `msg-reply-${Date.now()}`,
         sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        text: aiResponseText,
-        citations: ['Live Briefing Intelligence Feed', 'Verified Multi-Agent Synthesis'],
+        timestamp: data.timestamp || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        text: data.reply || 'No response returned from Hermes Agent.',
+        citations: data.citations || ['Hermes Executive Agent (Port 8000)'],
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (err: any) {
+      const errorMessage: ChatMessage = {
+        id: `msg-err-${Date.now()}`,
+        sender: 'assistant',
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        text: `⚠️ **Connection Error:** Could not contact server (${err.message || 'Network error'}).`,
+        citations: ['System Diagnostic'],
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 900);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -74,11 +92,11 @@ export function ChatbotView() {
         <div>
           <div className="module-kicker">
             <span className="viewer-status-dot" aria-hidden="true" />
-            AI ASSISTANT
+            HERMES AGENT • NOUS RESEARCH
           </div>
-          <h1 className="module-title">AI Executive Intelligence Chatbot</h1>
+          <h1 className="module-title">Hermes Executive Intelligence Chatbot</h1>
           <p className="module-subtitle">
-            Converse directly with your enterprise briefings, query financial impact metrics, and draft strategic memos.
+            Powered by Hermes Agent (localhost:8000). Direct strategic reasoning connected to your enterprise briefings.
           </p>
         </div>
 
@@ -125,7 +143,7 @@ export function ChatbotView() {
               <div className={`chat-bubble ${isUser ? 'user-bubble' : 'ai-bubble'}`}>
                 <div className="chat-bubble-header">
                   <span className="chat-bubble-sender">
-                    {isUser ? 'You (Executive)' : 'AIKO Intelligence Agent'}
+                    {isUser ? 'You (Executive)' : 'Hermes Intelligence Agent'}
                   </span>
                   <span className="chat-bubble-time">{msg.timestamp}</span>
                 </div>
@@ -167,7 +185,7 @@ export function ChatbotView() {
               <span className="typing-dot" />
               <span className="typing-dot" />
               <span className="typing-dot" />
-              <span className="typing-text">AIKO is synthesizing intelligence...</span>
+              <span className="typing-text">Hermes is reasoning and synthesizing...</span>
             </div>
           </div>
         )}

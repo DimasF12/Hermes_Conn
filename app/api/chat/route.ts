@@ -11,6 +11,7 @@ interface ChatPayload {
 }
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // Allow up to 5 minutes for agent reasoning
 
 export async function POST(req: Request) {
   try {
@@ -78,9 +79,10 @@ export async function POST(req: Request) {
       process.env.API_SERVER_KEY ||
       'change-me-local-dev';
 
-    // 3. Send HTTP POST to Hermes API
+    // 3. Send HTTP POST to Hermes API with a 5-minute timeout window
+    const timeoutMs = parseInt(process.env.HERMES_TIMEOUT_MS || '300000', 10);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     let res: Response;
     try {
@@ -94,19 +96,25 @@ export async function POST(req: Request) {
           model: hermesModel,
           messages: formattedMessages,
           temperature: 0.3,
-          max_tokens: 1500,
+          max_tokens: 2048,
         }),
         signal: controller.signal,
       });
     } catch (fetchErr: any) {
       clearTimeout(timeoutId);
       const isConnectionRefused = fetchErr.cause?.code === 'ECONNREFUSED' || fetchErr.message?.includes('fetch failed');
-      
+      const isTimeout = fetchErr.name === 'AbortError' || fetchErr.message?.includes('aborted');
+
+      let replyMsg = `⚠️ **Connection Error:** ${fetchErr.message || 'Unable to reach Hermes API'}`;
+      if (isConnectionRefused) {
+        replyMsg = `⚠️ **Hermes API Server Unreachable**\n\nCould not connect to Hermes at \`${hermesApiUrl}\`.\n\nPlease verify that your Hermes agent service is actively running on port 8000.`;
+      } else if (isTimeout) {
+        replyMsg = `⚠️ **Hermes Reasoning Timeout (${timeoutMs / 1000}s)**\n\nHermes Agent is still reasoning or executing tools. You can increase \`HERMES_TIMEOUT_MS\` in \`.env\` if your model requires more processing time.`;
+      }
+
       return NextResponse.json({
-        reply: isConnectionRefused
-          ? `⚠️ **Hermes API Server Unreachable**\n\nCould not connect to Hermes at \`${hermesApiUrl}\`.\n\nPlease verify that your Hermes agent service is actively running on port 8000.\n\n*Command to start:* \`hermes gateway\` or check your port configuration.`
-          : `⚠️ **Connection Error:** ${fetchErr.message || 'Unable to reach Hermes API'}`,
-        citations: ['System Diagnostic: Hermes API Offline'],
+        reply: replyMsg,
+        citations: ['System Diagnostic: Gateway Timeout / Offline'],
         isDiagnostic: true,
       });
     }

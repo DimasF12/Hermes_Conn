@@ -4,6 +4,7 @@ import path from 'path';
 
 interface ChatPayload {
   message: string;
+  persona?: 'data_analyst' | 'data_engineer';
   history?: Array<{
     sender: 'user' | 'assistant';
     text: string;
@@ -16,14 +17,15 @@ export const maxDuration = 300; // Allow up to 5 minutes for agent reasoning
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as ChatPayload;
-    const { message, history = [] } = body;
+    const { message, history = [], persona = 'data_analyst' } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
     const hermesApiUrl = process.env.HERMES_API_URL || 'http://localhost:8000/v1/chat/completions';
-    const hermesModel = process.env.HERMES_MODEL || 'hermes';
+    const targetModel = persona; // Hermes agent: 'data_analyst' (gemini-3.5-flash-lite) or 'data_engineer' (glm-4.7-flash)
+    const modelEngineName = persona === 'data_engineer' ? 'glm-4.7-flash' : 'gemini-3.5-flash-lite';
 
     // 1. Gather context from latest executive report in public/reports
     let reportContext = '';
@@ -50,12 +52,17 @@ export async function POST(req: Request) {
       reportContext = '';
     }
 
-    // 2. Format conversation history for OpenAI-compatible schema
+    // 2. Format conversation history with tailored system prompt per persona
+    const personaSystemPrompt =
+      persona === 'data_engineer'
+        ? 'You are Hermes Data Engineer & Systems Architect (powered by glm-4.7-flash). Provide expert, actionable technical guidance on data pipeline architecture, ETL/ELT workflows, database schema design, indexing, query optimization, partitioned storage, and data reliability.'
+        : 'You are Hermes Data Analyst & Executive Intelligence Specialist (powered by gemini-3.5-flash-lite). Provide quantitative analysis, KPI evaluations, sales performance trends, anomaly detection, and actionable business strategic insights based on executive briefing data.';
+
     const formattedMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       {
         role: 'system',
         content:
-          'You are Hermes Executive Intelligence Assistant for C-Level leadership. Provide direct, highly concise, and actionable strategic insights.' +
+          personaSystemPrompt +
           (reportContext ? `\n\nLatest Executive Briefing Context:\n${reportContext}` : ''),
       },
     ];
@@ -93,7 +100,7 @@ export async function POST(req: Request) {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: hermesModel,
+          model: targetModel,
           messages: formattedMessages,
           temperature: 0.3,
           max_tokens: 2048,
@@ -115,7 +122,9 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         reply: replyMsg,
-        citations: ['System Diagnostic: Gateway Timeout / Offline'],
+        citations: [`System Diagnostic: Gateway Timeout / Offline (${targetModel})`],
+        persona,
+        model: modelEngineName,
         isDiagnostic: true,
       });
     }
@@ -126,7 +135,9 @@ export async function POST(req: Request) {
       const errText = await res.text();
       return NextResponse.json({
         reply: `⚠️ **Hermes API Error (${res.status}):** ${errText.slice(0, 300)}`,
-        citations: ['System Diagnostic: Upstream Error'],
+        citations: [`System Diagnostic: Upstream Error (${targetModel})`],
+        persona,
+        model: modelEngineName,
         isDiagnostic: true,
       });
     }
@@ -138,11 +149,15 @@ export async function POST(req: Request) {
       data.response ||
       'Hermes returned an empty response.';
 
-    const citations = latestReportFile ? [`Latest Briefing: ${latestReportFile}`] : ['Hermes Intelligence Engine'];
+    const citations = latestReportFile
+      ? [`Latest Briefing: ${latestReportFile}`, `${persona} (${modelEngineName})`]
+      : [`Hermes: ${persona} (${modelEngineName})`];
 
     return NextResponse.json({
       reply: botReply,
       citations,
+      persona,
+      model: modelEngineName,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
   } catch (err: unknown) {

@@ -20,6 +20,12 @@ import {
   ChevronRight,
   Calendar,
   ChevronDown,
+  Trash2,
+  Plus,
+  PanelLeft,
+  Bot,
+  User,
+  Database,
 } from 'lucide-react';
 
 /**
@@ -51,6 +57,12 @@ export const Icons: Record<string, React.ReactNode> = {
   chevronRight: <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" />,
   calendar: <Calendar size={16} strokeWidth={1.8} aria-hidden="true" />,
   chevronDown: <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />,
+  trash: <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />,
+  plus: <Plus size={16} strokeWidth={1.8} aria-hidden="true" />,
+  panelLeft: <PanelLeft size={16} strokeWidth={1.8} aria-hidden="true" />,
+  bot: <Bot size={16} strokeWidth={1.8} aria-hidden="true" />,
+  user: <User size={16} strokeWidth={1.8} aria-hidden="true" />,
+  database: <Database size={16} strokeWidth={1.8} aria-hidden="true" />,
 };
 
 export {
@@ -74,4 +86,10 @@ export {
   ChevronRight,
   Calendar,
   ChevronDown,
+  Trash2,
+  Plus,
+  PanelLeft,
+  Bot,
+  User,
+  Database,
 };

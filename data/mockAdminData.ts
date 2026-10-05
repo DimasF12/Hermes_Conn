@@ -1,11 +1,3 @@
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'assistant';
-  timestamp: string;
-  text: string;
-  citations?: string[];
-}
-
 export interface ModelOption {
   id: string;
   name: string;
@@ -65,38 +57,6 @@ export interface UserTrafficStats {
     readers: number;
   }[];
 }
-
-// -------------------------------------------------------------
-// 1. CHATBOT MOCK DATA
-// -------------------------------------------------------------
-export const mockSuggestedPrompts = [
-  'Summarize the top 3 critical risks in the latest briefing',
-  'What are the concrete recommended actions for Legal & Risk?',
-  'Draft a 3-bullet executive briefing memo for the Board of Directors',
-  'Explain the financial impact of the PLN Wheeling tariff adjustment',
-];
-
-export const mockInitialMessages: ChatMessage[] = [
-  {
-    id: 'msg-1',
-    sender: 'assistant',
-    timestamp: '09:00 AM',
-    text: 'Good morning. I am **AIKO Executive Intelligence Assistant**. I have fully indexed the latest C-Level briefings and market intelligence feeds. How can I assist your strategic decision-making today?',
-  },
-  {
-    id: 'msg-2',
-    sender: 'user',
-    timestamp: '09:02 AM',
-    text: 'What is the immediate impact of the revised PLN Wheeling tariff scheme on our renewable IPP pipeline?',
-  },
-  {
-    id: 'msg-3',
-    sender: 'assistant',
-    timestamp: '09:02 AM',
-    text: 'Based on the **October 2nd Executive Briefing (Signal #01)**:\n\n1. **Margin Contraction:** The open transmission tariff revision introduces an estimated **-8.4% margin contraction** on upcoming private IPP joint ventures.\n2. **Regulatory Timeline:** MEMR Ministerial Decree No. 14/2026 takes effect in Q1 2027, requiring PPA renegotiation clauses to be locked before November 15th.\n3. **Recommended Move:** Prioritize legal audit of clause 7.2 with PLN Enjiniring to trigger the grandfathering provisions.',
-    citations: ['Briefing Edition: 2026-10-02', 'Signal #01 (Regulasi / Immediate)'],
-  },
-];
 
 // -------------------------------------------------------------
 // 2. TOKEN CONFIGURATION MOCK DATA

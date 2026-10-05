@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ReportEntry } from '@/lib/reports';
 import { Icons } from '@/components/icons/Icons';
+import { DateStepper } from '@/components/viewer/DateStepper';
 
 interface ReportTopbarProps {
   reports: ReportEntry[];
@@ -12,12 +13,6 @@ interface ReportTopbarProps {
   onRefresh: () => void;
   onPrint: () => void;
   onFullscreen: () => void;
-}
-
-function formatDate(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return isoDate;
-  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function ReportTopbar({
@@ -45,22 +40,18 @@ export function ReportTopbar({
         </div>
       </div>
 
-      {/* EDITION PICKER */}
-      <label className="viewer-select">
-        <span className="sr-only">Select briefing edition</span>
-        <select
-          id="reportSelector"
-          value={selectedReport?.file ?? ''}
-          onChange={e => onSelect(e.target.value)}
-          disabled={reports.length === 0}
-        >
-          {reports.map((report, idx) => (
-            <option key={report.file} value={report.file}>
-              {formatDate(report.date)} · {report.title}{idx === 0 ? ' (Latest)' : ''}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* EDITION PICKER: ‹ (date) › */}
+      {/* ponytail: one report per date assumed; if two share a date only the newest is reachable. Upgrade: step by report index. */}
+      <DateStepper
+        id="reportDate"
+        dates={[...new Set(reports.map(r => r.date))]}
+        value={selectedReport?.date ?? ''}
+        onChange={date => {
+          const match = reports.find(r => r.date === date);
+          if (match) onSelect(match.file);
+        }}
+      />
+      {selectedReport && <span className="viewer-report-title">{selectedReport.title}</span>}
 
       {/* ACTIONS */}
       <div className="viewer-actions">

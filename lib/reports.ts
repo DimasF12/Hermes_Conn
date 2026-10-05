@@ -43,8 +43,49 @@ function prettifyFileName(file: string): string {
     .trim() || file;
 }
 
-/** Scan folder laporan dan kembalikan daftar edisi, terbaru di atas. */
+/** Scan folder laporan / Blob Storage dan kembalikan daftar edisi, terbaru di atas. */
 export async function listReports(): Promise<ReportEntry[]> {
+  const containerUrl = process.env.REPORTS_BLOB_CONTAINER_URL?.replace(/\/$/, '');
+  const sas = process.env.REPORTS_BLOB_SAS?.replace(/^\?/, '');
+
+  if (containerUrl && sas) {
+    try {
+      const res = await fetch(`${containerUrl}?restype=container&comp=list&${sas}`, { cache: 'no-store' });
+      if (res.ok) {
+        const xml = await res.text();
+        const blobMatches = [...xml.matchAll(/<Blob>([\s\S]*?)<\/Blob>/gi)];
+        const entries: ReportEntry[] = [];
+
+        for (const m of blobMatches) {
+          const blobXml = m[1];
+          const name = blobXml.match(/<Name>([\s\S]*?)<\/Name>/i)?.[1]?.trim();
+          if (!name || !/\.html?$/i.test(name)) continue;
+
+          const size = parseInt(blobXml.match(/<Content-Length>(\d+)<\/Content-Length>/i)?.[1] || '0', 10);
+          const lastMod = blobXml.match(/<Last-Modified>([\s\S]*?)<\/Last-Modified>/i)?.[1] || new Date().toISOString();
+          const date = name.match(DATE_PREFIX)?.[1] ?? new Date(lastMod).toISOString().slice(0, 10);
+
+          entries.push({
+            file: name,
+            url: `${containerUrl}/${encodeURIComponent(name)}?${sas}`,
+            title: prettifyFileName(name),
+            date,
+            size,
+            updatedAt: new Date(lastMod).toISOString(),
+          });
+        }
+
+        if (entries.length > 0) {
+          return entries.sort(
+            (a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
+          );
+        }
+      }
+    } catch {
+      // Fallback to local public/reports on any network/config failure
+    }
+  }
+
   let files: string[];
   try {
     files = await fs.readdir(REPORTS_DIR);

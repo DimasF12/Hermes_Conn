@@ -1,218 +1,152 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icons } from '@/components/icons/Icons';
-import {
-  ChatMessage,
-  mockInitialMessages,
-  mockSuggestedPrompts,
-} from '@/data/mockAdminData';
 
-export function ChatbotView() {
-  const [messages, setMessages] = useState<ChatMessage[]>(mockInitialMessages);
-  const [inputQuery, setInputQuery] = useState('');
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  citations?: string[];
+}
+
+const STARTERS = [
+  'Summarize the latest briefing',
+  'What are the key regulatory risks?',
+  'Draft a short strategic summary for the board',
+];
+
+export function ChatbotView({ seedQuery }: { seedQuery?: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const endRef = useRef<HTMLDivElement>(null);
+  const seededRef = useRef(false);
 
   useEffect(() => {
-    scrollToBottom();
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const handleSendMessage = async (textToSend?: string) => {
-    const query = (textToSend || inputQuery).trim();
-    if (!query) return;
+  const send = async (text?: string) => {
+    const query = (text ?? input).trim();
+    if (!query || isTyping) return;
 
-    const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: 'user',
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      text: query,
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputQuery('');
+    const history = messages.map(m => ({ sender: m.sender, text: m.text }));
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text: query }]);
+    setInput('');
     setIsTyping(true);
 
-    // Send real-time request to Next.js /api/chat (Hermes API Gateway)
     try {
-      const historyPayload = messages.map(m => ({
-        sender: m.sender,
-        text: m.text,
-      }));
-
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: query,
-          history: historyPayload,
-        }),
+        body: JSON.stringify({ message: query, history }),
       });
-
       const data = await res.json();
-
-      const assistantMessage: ChatMessage = {
-        id: `msg-reply-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: data.timestamp || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        text: data.reply || 'No response returned from Hermes Agent.',
-        citations: data.citations || ['Hermes Executive Agent (Port 8000)'],
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (err: any) {
-      const errorMessage: ChatMessage = {
-        id: `msg-err-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        text: `⚠️ **Connection Error:** Could not contact server (${err.message || 'Network error'}).`,
-        citations: ['System Diagnostic'],
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [
+        ...prev,
+        { id: `a-${Date.now()}`, sender: 'assistant', text: data.reply || 'No response from Hermes.', citations: data.citations },
+      ]);
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        { id: `e-${Date.now()}`, sender: 'assistant', text: `⚠️ Could not reach server (${err instanceof Error ? err.message : 'network error'}).` },
+      ]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSendMessage();
+  // "Ask Hermes" from the News dashboard: send once on mount (ref guards React strict-mode double run)
+  useEffect(() => {
+    if (seedQuery && !seededRef.current) {
+      seededRef.current = true;
+      send(seedQuery);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedQuery]);
 
   return (
     <div className="module-container chat-view-container">
-      {/* HEADER */}
-      <div className="module-header">
-        <div>
-          <div className="module-kicker">
-            <span className="viewer-status-dot" aria-hidden="true" />
-            HERMES AGENT • NOUS RESEARCH
-          </div>
-          <h1 className="module-title">Hermes Executive Intelligence Chatbot</h1>
-          <p className="module-subtitle">
-            Powered by Hermes Agent (localhost:8000). Direct strategic reasoning connected to your enterprise briefings.
-          </p>
+      <div className="chat-header">
+        <div className="chat-header-title">
+          <span className="viewer-status-dot" aria-hidden="true" />
+          <strong>Hermes Agent</strong>
+          <span className="chat-header-sub">Online · :8000</span>
         </div>
-
-        <button
-          className="btn btn-quiet"
-          onClick={() => setMessages(mockInitialMessages)}
-          title="Reset conversation"
-        >
-          {Icons.refresh} Reset Conversation
-        </button>
+        {messages.length > 0 && (
+          <button id="clearChat" className="btn btn-quiet" onClick={() => setMessages([])} disabled={isTyping}>
+            {Icons.refresh} Clear chat
+          </button>
+        )}
       </div>
 
-      {/* SUGGESTED PROMPTS */}
-      <div className="chat-prompts-bar">
-        <span className="chat-prompts-label">Suggested Inquiries:</span>
-        <div className="chat-prompts-list">
-          {mockSuggestedPrompts.map((prompt, idx) => (
-            <button
-              key={idx}
-              className="chat-prompt-pill"
-              onClick={() => handleSendMessage(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* MESSAGES THREAD */}
       <div className="chat-messages-area">
-        {messages.map(msg => {
-          const isUser = msg.sender === 'user';
-          return (
-            <div
-              key={msg.id}
-              className={`chat-bubble-row ${isUser ? 'is-user-row' : 'is-ai-row'}`}
-            >
-              {!isUser && (
-                <div className="chat-avatar ai-avatar">
-                  {Icons.sparkles}
-                </div>
-              )}
-
-              <div className={`chat-bubble ${isUser ? 'user-bubble' : 'ai-bubble'}`}>
-                <div className="chat-bubble-header">
-                  <span className="chat-bubble-sender">
-                    {isUser ? 'You (Executive)' : 'Hermes Intelligence Agent'}
-                  </span>
-                  <span className="chat-bubble-time">{msg.timestamp}</span>
-                </div>
-
+        {messages.length === 0 && !isTyping ? (
+          <div className="chat-empty">
+            <span className="chat-empty-icon">{Icons.sparkles}</span>
+            <h1>How can I help you today?</h1>
+            <div className="chat-starters">
+              {STARTERS.map(s => (
+                <button key={s} className="chat-starter" onClick={() => send(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          messages.map(msg => (
+            <div key={msg.id} className={`chat-bubble-row ${msg.sender === 'user' ? 'is-user-row' : 'is-ai-row'}`}>
+              <div className={`chat-bubble ${msg.sender === 'user' ? 'user-bubble' : 'ai-bubble'}`}>
                 <div className="chat-bubble-content">
-                  {msg.text.split('\n').map((line, lineIdx) => {
-                    if (!line.trim()) return <br key={lineIdx} />;
-                    return <p key={lineIdx}>{line}</p>;
-                  })}
+                  {msg.text.split('\n').map((line, i) => (line.trim() ? <p key={i}>{line}</p> : <br key={i} />))}
                 </div>
-
                 {msg.citations && msg.citations.length > 0 && (
                   <div className="chat-citations">
-                    <span className="citations-label">Sources:</span>
-                    {msg.citations.map((cite, cIdx) => (
-                      <span key={cIdx} className="citation-badge">
-                        📌 {cite}
-                      </span>
+                    {msg.citations.map(c => (
+                      <span key={c} className="citation-badge">{c}</span>
                     ))}
                   </div>
                 )}
               </div>
-
-              {isUser && (
-                <div className="chat-avatar user-avatar">
-                  EX
-                </div>
-              )}
             </div>
-          );
-        })}
+          ))
+        )}
 
         {isTyping && (
           <div className="chat-bubble-row is-ai-row">
-            <div className="chat-avatar ai-avatar">
-              {Icons.sparkles}
-            </div>
-            <div className="chat-bubble ai-bubble typing-bubble">
+            <div className="chat-bubble ai-bubble typing-bubble" role="status">
               <span className="typing-dot" />
               <span className="typing-dot" />
               <span className="typing-dot" />
-              <span className="typing-text">Hermes is reasoning and synthesizing...</span>
+              <span className="typing-text">Hermes is thinking…</span>
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
+        <div ref={endRef} />
       </div>
 
-      {/* INPUT BAR */}
-      <div className="chat-input-wrapper">
+      <form
+        className="chat-input-wrapper"
+        onSubmit={e => {
+          e.preventDefault();
+          send();
+        }}
+      >
         <input
+          id="chatInput"
           type="text"
           className="chat-input-field"
-          placeholder="Ask anything about latest briefings, risks, or financial impacts... (Press Enter)"
-          value={inputQuery}
-          onChange={e => setInputQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
+          placeholder="Message Hermes…"
+          aria-label="Message Hermes"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          autoFocus
         />
-        <button
-          className="btn btn-primary chat-send-btn"
-          onClick={() => handleSendMessage()}
-          disabled={!inputQuery.trim() || isTyping}
-          aria-label="Send inquiry"
-        >
+        <button type="submit" className="btn btn-primary chat-send-btn" disabled={!input.trim() || isTyping} aria-label="Send">
           {Icons.send}
-          <span>Send</span>
         </button>
-      </div>
+      </form>
     </div>
   );
 }

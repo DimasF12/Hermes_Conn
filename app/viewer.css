@@ -299,30 +299,71 @@
   100% { box-shadow: 0 0 0 0 rgba(2, 119, 90, 0); }
 }
 
-.viewer-select {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 480px;
-}
-.viewer-select select {
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 36px 8px 14px;
+/* DATE STEPPER: ‹ (date) › */
+.date-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  background-color: var(--subtle);
+  border-radius: 10px;
+  background: var(--subtle);
+  flex-shrink: 0;
+}
+.date-stepper-arrow,
+.date-stepper-label {
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.date-stepper-arrow { width: 34px; color: var(--muted); }
+.date-stepper-arrow svg { width: 16px; height: 16px; }
+.date-stepper-arrow:not(:disabled):hover,
+.date-stepper-label:not(:disabled):hover { background: var(--surface); color: var(--ink); }
+.date-stepper-center { position: relative; }
+.date-stepper-label {
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 650;
   color: var(--ink);
+  white-space: nowrap;
+}
+.date-stepper-label svg { width: 15px; height: 15px; color: var(--brand); }
+.date-stepper-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+/* Native picker anchor: invisible but rendered so showPicker() works and the popup opens under the label */
+.date-stepper-input {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.viewer-report-title {
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235e6e65' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  transition: border-color 0.15s, background-color 0.15s;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.viewer-select select:hover { border-color: var(--border-strong); }
 
 .viewer-actions {
   display: flex;
@@ -520,51 +561,61 @@
   box-sizing: border-box;
 }
 
-.chat-prompts-bar {
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.chat-header-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 14px;
-  flex-shrink: 0;
-  overflow-x: auto;
-}
-
-.chat-prompts-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.chat-prompts-list {
-  display: flex;
-  gap: 8px;
-}
-
-.chat-prompt-pill {
-  font-size: 12px;
-  font-weight: 550;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--subtle);
-  border: 1px solid var(--border);
+  font-size: 15px;
   color: var(--ink);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
+.chat-header-sub { font-size: 12px; color: var(--muted); }
 
-.chat-prompt-pill:hover {
-  background: var(--brand-soft);
-  color: var(--brand-strong);
-  border-color: rgba(2, 119, 90, 0.25);
+.chat-empty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
 }
+.chat-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.chat-empty h1 { font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
+.chat-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 640px;
+}
+.chat-starter {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.15s, background 0.15s;
+}
+.chat-starter:hover { border-color: var(--brand); background: var(--brand-soft); }
 
 .chat-messages-area {
   flex: 1 1 auto;
@@ -591,34 +642,6 @@
   justify-content: flex-end;
 }
 
-.chat-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.ai-avatar {
-  background: var(--brand-soft);
-  color: var(--brand);
-  border: 1px solid rgba(2, 119, 90, 0.2);
-}
-
-.ai-avatar svg {
-  width: 17px;
-  height: 17px;
-}
-
-.user-avatar {
-  background: var(--forest);
-  color: var(--forest-ink);
-}
-
 .chat-bubble {
   max-width: min(780px, 80%);
   padding: 14px 18px;
@@ -640,24 +663,6 @@
   border-top-right-radius: 4px;
 }
 
-.chat-bubble-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  font-size: 11px;
-  margin-bottom: 6px;
-  opacity: 0.8;
-}
-
-.chat-bubble-sender {
-  font-weight: 700;
-}
-
-.chat-bubble-time {
-  font-size: 10px;
-}
-
 .chat-bubble-content p {
   margin: 0 0 8px;
 }
@@ -674,13 +679,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-}
-
-.citations-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
 }
 
 .citation-badge {
@@ -748,6 +746,7 @@
   font-size: 13px;
   border-radius: 10px;
 }
+
 
 /* ---------- 2. TOKEN CONFIG VIEW STYLES ---------- */
 .save-success-banner {

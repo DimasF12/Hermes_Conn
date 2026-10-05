@@ -37,7 +37,7 @@ export function Sidebar({
     },
     {
       id: 'chat',
-      label: 'AI Executive Chatbot',
+      label: 'Hermes Chatbot',
       icon: Icons.messageSquare,
       badge: 'Live',
       badgeColor: 'var(--brand)',

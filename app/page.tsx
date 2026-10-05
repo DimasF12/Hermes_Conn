@@ -95,7 +95,7 @@ export default function CommandCenterPage() {
           </div>
         )}
 
-        {/* VIEW 2: AI EXECUTIVE CHATBOT */}
+        {/* VIEW 2: HERMES CHATBOT */}
         {activeMenu === 'chat' && <ChatbotView />}
 
         {/* VIEW 3: AI TOKEN CONFIGURATION */}

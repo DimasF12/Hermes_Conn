@@ -2,6 +2,30 @@
    AIKO EXECUTIVE COMMAND CENTER & REPORT VIEWER
    ============================================================ */
 
+:root {
+  --brand: #02775a; --brand-strong: #025c46; --brand-soft: #e9f3ee;
+  --canvas: #f5f6f2; --surface: #ffffff; --subtle: #f4f6f3;
+  --ink: #182e27; --muted: #5e6e65; --faint: #66746b;
+  --border: #dde4dc; --border-strong: #c5d4c9;
+  --forest: #103e31; --forest-ink: #f4faf6; --forest-muted: #c5d9cd;
+  --accent: #d7edaf; --blue: #376887; --blue-soft: #eef3f7;
+  --amber: #89611c; --amber-soft: #f8f1e4; --danger: #aa4332;
+  --danger-soft: #faeee8; --shadow: 0 8px 24px rgba(27, 53, 40, .045);
+  --radius: 18px; --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --serif: Georgia, 'Times New Roman', serif; --mono: 'SFMono-Regular', Consolas, monospace;
+}
+
+[data-theme="dark"] {
+  --brand: #7bd7b0; --brand-strong: #a1e7c8; --brand-soft: #203b30;
+  --canvas: #111c17; --surface: #192720; --subtle: #1e2e25;
+  --ink: #e7f0e9; --muted: #adbfb2; --faint: #9dafA3;
+  --border: #33463a; --border-strong: #4b6252;
+  --forest: #0b3024; --forest-ink: #f4faf6; --forest-muted: #c5d9cd;
+  --accent: #d7edaf; --blue: #9bbfda; --blue-soft: #243542;
+  --amber: #e1be77; --amber-soft: #393324; --danger: #f0b29f;
+  --danger-soft: #3a2b23; --shadow: 0 8px 28px rgba(0, 0, 0, .14);
+}
+
 .command-center-app {
   height: 100vh;
   height: 100dvh;
@@ -525,15 +549,108 @@
   text-overflow: ellipsis;
 }
 
+/* ---------- BUTTON UTILITIES ---------- */
+.btn {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--subtle);
+  border-color: var(--border-strong);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #ffffff;
+  border-color: var(--brand);
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(2, 119, 90, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 119, 90, 0.3);
+}
+
+.btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background: var(--subtle);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desktop-label {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .desktop-label {
+    display: none;
+  }
+}
+
 .viewer-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
   flex-shrink: 0;
 }
-.viewer-actions .icon-btn { width: 40px; min-height: 40px; }
-.viewer-actions .btn-primary { min-height: 40px; margin-left: 6px; }
+.viewer-actions .icon-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  min-width: 36px;
+}
+.viewer-actions .btn-primary {
+  min-height: 36px;
+  height: 36px;
+  padding: 0 14px;
+  margin-left: 4px;
+}
 .viewer-actions a[aria-disabled="true"] { pointer-events: none; opacity: 0.45; }
 
 .viewer-spin { display: inline-flex; animation: viewer-rotate 0.9s linear infinite; }

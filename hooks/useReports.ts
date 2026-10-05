@@ -13,28 +13,53 @@ export function useReports() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const applyData = useCallback((data: ReportEntry[]) => {
+    setReports(data);
+    setError(null);
+    setSelectedFile(current =>
+      data.some(r => r.file === current) ? current : data[0]?.file ?? ''
+    );
+  }, []);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/reports', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ReportEntry[] = await res.json();
-
-      setReports(data);
-      setError(null);
-      setSelectedFile(current =>
-        data.some(r => r.file === current) ? current : data[0]?.file ?? ''
-      );
-    } catch (err) {
+      applyData(data);
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Gagal memuat daftar laporan');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [applyData]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    let ignore = false;
+
+    fetch('/api/reports', { cache: 'no-store' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<ReportEntry[]>;
+      })
+      .then(data => {
+        if (!ignore) {
+          applyData(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : 'Gagal memuat daftar laporan');
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [applyData]);
 
   const selectedReport = reports.find(r => r.file === selectedFile) ?? null;
 

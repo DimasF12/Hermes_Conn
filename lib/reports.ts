@@ -3,7 +3,7 @@ import path from 'path';
 import { BlobServiceClient } from '@azure/storage-blob';
 
 /** Local folder fallback */
-export const REPORTS_DIR = path.join(process.cwd(), 'public', 'reports');
+const REPORTS_DIR = path.join(process.cwd(), 'public', 'reports');
 
 export interface ReportEntry {
   /** Nama file, contoh: "2026-10-05.html" */
@@ -23,7 +23,6 @@ export interface ReportEntry {
 }
 
 import { formatReportDate } from './dateUtils';
-export { formatReportDate };
 
 const DATE_PATTERN = /(\d{4}-\d{2}-\d{2})/;
 

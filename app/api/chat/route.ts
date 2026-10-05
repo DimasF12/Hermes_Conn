@@ -100,12 +100,13 @@ export async function POST(req: Request) {
         }),
         signal: controller.signal,
       });
-    } catch (fetchErr: any) {
+    } catch (fetchErr: unknown) {
       clearTimeout(timeoutId);
-      const isConnectionRefused = fetchErr.cause?.code === 'ECONNREFUSED' || fetchErr.message?.includes('fetch failed');
-      const isTimeout = fetchErr.name === 'AbortError' || fetchErr.message?.includes('aborted');
+      const errorObj = fetchErr as Error & { cause?: { code?: string } };
+      const isConnectionRefused = errorObj.cause?.code === 'ECONNREFUSED' || errorObj.message?.includes('fetch failed');
+      const isTimeout = errorObj.name === 'AbortError' || errorObj.message?.includes('aborted');
 
-      let replyMsg = `⚠️ **Connection Error:** ${fetchErr.message || 'Unable to reach Hermes API'}`;
+      let replyMsg = `⚠️ **Connection Error:** ${errorObj.message || 'Unable to reach Hermes API'}`;
       if (isConnectionRefused) {
         replyMsg = `⚠️ **Hermes API Server Unreachable**\n\nCould not connect to Hermes at \`${hermesApiUrl}\`.\n\nPlease verify that your Hermes agent service is actively running on port 8000.`;
       } else if (isTimeout) {
@@ -144,11 +145,12 @@ export async function POST(req: Request) {
       citations,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Chat API Error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown server error';
     return NextResponse.json(
       {
-        reply: `⚠️ Internal Error: ${err.message || 'Unknown server error'}`,
+        reply: `⚠️ Internal Error: ${errorMessage}`,
         citations: ['System Diagnostic: Exception'],
         isDiagnostic: true,
       },

@@ -1,13 +1,47 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useReports } from '@/hooks/useReports';
 import { Sidebar, NavigationMenuId } from '@/components/layout/Sidebar';
 import { ReportTopbar } from '@/components/viewer/ReportTopbar';
 import { ReportCanvas } from '@/components/viewer/ReportCanvas';
-import { ChatbotView } from '@/components/modules/ChatbotView';
-import { TokenConfigView } from '@/components/modules/TokenConfigView';
-import { UserTrafficView } from '@/components/modules/UserTrafficView';
+
+const ChatbotView = dynamic(
+  () => import('@/components/modules/ChatbotView').then(m => m.ChatbotView),
+  {
+    loading: () => (
+      <div className="viewer-loader is-standalone" role="status">
+        <span className="viewer-loader-bar" />
+        <span>Memuat AI Assistant…</span>
+      </div>
+    ),
+  }
+);
+
+const TokenConfigView = dynamic(
+  () => import('@/components/modules/TokenConfigView').then(m => m.TokenConfigView),
+  {
+    loading: () => (
+      <div className="viewer-loader is-standalone" role="status">
+        <span className="viewer-loader-bar" />
+        <span>Memuat Konfigurasi Token…</span>
+      </div>
+    ),
+  }
+);
+
+const UserTrafficView = dynamic(
+  () => import('@/components/modules/UserTrafficView').then(m => m.UserTrafficView),
+  {
+    loading: () => (
+      <div className="viewer-loader is-standalone" role="status">
+        <span className="viewer-loader-bar" />
+        <span>Memuat Trafik Pengguna…</span>
+      </div>
+    ),
+  }
+);
 
 export default function CommandCenterPage() {
   const { reports, selectedReport, setSelectedFile, isLoading, error, refresh } = useReports();

@@ -66,17 +66,17 @@ export function DateStepper({
   const initialDate = current?.date ? parseIsoDate(current.date) : null;
   const [viewYear, setViewYear] = useState<number>(initialDate?.year ?? 2026);
   const [viewMonth, setViewMonth] = useState<number>(initialDate?.month ?? 10);
+  const [prevDate, setPrevDate] = useState<string | null>(current?.date ?? null);
 
-  // Sync bulan tampilan ketika kalender dibuka atau tanggal berubah
-  useEffect(() => {
-    if (current?.date) {
-      const parsed = parseIsoDate(current.date);
-      if (parsed) {
-        setViewYear(parsed.year);
-        setViewMonth(parsed.month);
-      }
+  // Sync bulan tampilan ketika tanggal edisi berubah
+  if (current?.date && current.date !== prevDate) {
+    setPrevDate(current.date);
+    const parsed = parseIsoDate(current.date);
+    if (parsed) {
+      setViewYear(parsed.year);
+      setViewMonth(parsed.month);
     }
-  }, [current?.date, isOpen]);
+  }
 
   // Close on click outside & Escape key
   useEffect(() => {
@@ -147,6 +147,20 @@ export function DateStepper({
     }
   };
 
+  const toggleCalendar = () => {
+    setIsOpen(open => {
+      const nextOpen = !open;
+      if (nextOpen && current?.date) {
+        const parsed = parseIsoDate(current.date);
+        if (parsed) {
+          setViewYear(parsed.year);
+          setViewMonth(parsed.month);
+        }
+      }
+      return nextOpen;
+    });
+  };
+
   const displayDate = current ? formatReportDate(current.date, 'long') : 'Pilih Tanggal';
 
   return (
@@ -172,7 +186,7 @@ export function DateStepper({
           id={`${id}Trigger`}
           type="button"
           className={`date-stepper-trigger ${isOpen ? 'is-active' : ''}`}
-          onClick={() => setIsOpen(prev => !prev)}
+          onClick={toggleCalendar}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           title="Klik untuk membuka kalender filter tanggal"
@@ -265,7 +279,7 @@ export function DateStepper({
                   aria-label={`${item.day} ${MONTHS_LONG_ID[viewMonth - 1]} ${viewYear}${
                     isAvailable ? ' - Laporan tersedia' : ''
                   }`}
-                  aria-selected={isSelected}
+                  aria-pressed={isSelected}
                 >
                   <span className="calendar-day-number">{item.day}</span>
                   {isAvailable && <span className="calendar-day-dot" aria-hidden="true" />}

@@ -22,7 +22,8 @@ export async function GET(req: Request) {
         'Cache-Control': 'public, max-age=3600',
       },
     });
-  } catch (err: any) {
-    return new Response(`Error loading report: ${err.message}`, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return new Response(`Error loading report: ${message}`, { status: 500 });
   }
 }

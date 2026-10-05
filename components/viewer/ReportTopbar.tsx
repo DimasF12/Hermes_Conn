@@ -46,7 +46,7 @@ export function ReportTopbar({
       />
       {selectedReport && (
         <div className="viewer-report-badge" title={`File: ${selectedReport.file}`}>
-          <span className="viewer-file-badge">{selectedReport.file}</span>
+          {/* <span className="viewer-file-badge">{selectedReport.file}</span> */}
           <span className="viewer-report-title">{selectedReport.title}</span>
         </div>
       )}

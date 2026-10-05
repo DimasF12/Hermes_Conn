@@ -83,7 +83,7 @@ button { text-align: inherit; }
 .nav-tab[aria-selected="true"] .count { background: var(--brand-soft); color: var(--brand-strong); }
 .nav-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-main { padding-top: 31px; padding-bottom: 30px; min-height: 60vh; }
+main.executive-main { padding-top: 31px; padding-bottom: 30px; min-height: 60vh; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 28px; margin-bottom: 25px; }
 .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 700; color: var(--brand); letter-spacing: .13em; text-transform: uppercase; }
 .hero h1 { font: 400 clamp(34px, 3.45vw, 50px)/1.08 var(--serif); letter-spacing: -.055em; margin: 11px 0 12px; max-width: 900px; }

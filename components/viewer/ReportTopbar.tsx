@@ -28,30 +28,28 @@ export function ReportTopbar({
 
   return (
     <header className="viewer-topbar">
-      {/* BRAND */}
+      {/* TITLE & STATUS */}
       <div className="viewer-brand">
-        <span className="viewer-logo">AIKO</span>
-        <div>
-          <div className="viewer-brand-name">C-Level Command Center</div>
-          <div className="viewer-status">
-            <span className="viewer-status-dot" aria-hidden="true" />
-            {reports.length} {reports.length === 1 ? 'edition' : 'editions'} available
-          </div>
+        <span className="viewer-brand-name">Sales Intelligence</span>
+        <div className="viewer-status">
+          <span className="viewer-status-dot" aria-hidden="true" />
+          {reports.length} edisi
         </div>
       </div>
 
       {/* EDITION PICKER: ‹ (date) › */}
-      {/* ponytail: one report per date assumed; if two share a date only the newest is reachable. Upgrade: step by report index. */}
       <DateStepper
         id="reportDate"
-        dates={[...new Set(reports.map(r => r.date))]}
-        value={selectedReport?.date ?? ''}
-        onChange={date => {
-          const match = reports.find(r => r.date === date);
-          if (match) onSelect(match.file);
-        }}
+        reports={reports}
+        selectedFile={selectedReport?.file ?? ''}
+        onSelect={onSelect}
       />
-      {selectedReport && <span className="viewer-report-title">{selectedReport.title}</span>}
+      {selectedReport && (
+        <div className="viewer-report-badge" title={`File: ${selectedReport.file}`}>
+          <span className="viewer-file-badge">{selectedReport.file}</span>
+          <span className="viewer-report-title">{selectedReport.title}</span>
+        </div>
+      )}
 
       {/* ACTIONS */}
       <div className="viewer-actions">

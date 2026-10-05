@@ -230,6 +230,8 @@
   height: 100%;
   overflow-y: auto;
   background: var(--canvas);
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* ---------- VIEWER SHELL (HTML REPORTS) ---------- */
@@ -239,6 +241,8 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--canvas);
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* TOPBAR */
@@ -246,21 +250,23 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 64px;
-  padding: 10px clamp(14px, 2.4vw, 32px);
+  gap: 14px;
+  min-height: 52px;
+  padding: 6px clamp(12px, 2vw, 24px);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   position: relative;
+  top: 0;
+  margin: 0 !important;
   z-index: 2;
 }
 
 .viewer-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding-right: 18px;
+  gap: 10px;
+  padding-right: 14px;
   border-right: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -299,7 +305,12 @@
   100% { box-shadow: 0 0 0 0 rgba(2, 119, 90, 0); }
 }
 
-/* DATE STEPPER: ‹ (date) › */
+/* DATE STEPPER ROOT & BUTTONS */
+.date-stepper-root {
+  position: relative;
+  display: inline-flex;
+}
+
 .date-stepper {
   display: inline-flex;
   align-items: center;
@@ -310,31 +321,46 @@
   background: var(--subtle);
   flex-shrink: 0;
 }
-.date-stepper-arrow,
-.date-stepper-label {
+.date-stepper-arrow {
   min-height: 34px;
+  width: 34px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: var(--muted);
+  cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.date-stepper-arrow { width: 34px; color: var(--muted); }
 .date-stepper-arrow svg { width: 16px; height: 16px; }
-.date-stepper-arrow:not(:disabled):hover,
-.date-stepper-label:not(:disabled):hover { background: var(--surface); color: var(--ink); }
-.date-stepper-center { position: relative; }
-.date-stepper-label {
+.date-stepper-arrow:not(:disabled):hover { background: var(--surface); color: var(--ink); }
+.date-stepper-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.date-stepper-trigger {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
   padding: 0 12px;
+  min-height: 34px;
+  border-radius: 7px;
   font-size: 13px;
   font-weight: 650;
   color: var(--ink);
   white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
-.date-stepper-label svg { width: 15px; height: 15px; color: var(--brand); }
+.date-stepper-trigger:hover,
+.date-stepper-trigger.is-active {
+  background: var(--surface);
+  color: var(--ink);
+}
+.date-stepper-icon svg { width: 15px; height: 15px; color: var(--brand); display: block; }
+.date-stepper-caret svg { width: 13px; height: 13px; color: var(--muted); margin-left: 2px; display: block; }
 .date-stepper-badge {
   font-size: 10px;
   font-weight: 700;
@@ -343,17 +369,151 @@
   background: var(--brand-soft);
   color: var(--brand-strong);
 }
-/* Native picker anchor: invisible but rendered so showPicker() works and the popup opens under the label */
-.date-stepper-input {
+
+/* INTERACTIVE CALENDAR POPOVER */
+.calendar-popover {
   position: absolute;
-  inset: auto 0 0 0;
-  width: 100%;
-  height: 1px;
-  min-height: 0;
-  padding: 0;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 120;
+  width: 290px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  animation: calFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes calFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.calendar-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.cal-month-nav {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cal-month-nav svg { width: 14px; height: 14px; }
+.cal-month-nav:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+.cal-month-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  flex: 1;
+}
+
+.calendar-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.calendar-weekday-cell {
+  padding: 3px 0;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-day-btn {
+  position: relative;
+  height: 34px;
+  border-radius: 7px;
   border: 0;
-  opacity: 0;
-  pointer-events: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--muted);
+  cursor: default;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.calendar-day-btn.has-report {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--subtle);
+  cursor: pointer;
+}
+.calendar-day-btn.has-report:hover {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  transform: scale(1.06);
+}
+.calendar-day-btn.is-selected {
+  background: var(--forest, #103e31) !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(16, 62, 49, 0.25);
+}
+.calendar-day-btn.no-report {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+.calendar-day-btn.is-outside-month {
+  opacity: 0.15;
+}
+.calendar-day-number {
+  line-height: 1;
+}
+.calendar-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--brand);
+  margin-top: 2px;
+}
+.calendar-day-btn.is-selected .calendar-day-dot {
+  background: #ffffff;
+}
+
+/* REPORT BADGE & TITLE IN TOPBAR */
+.viewer-report-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.viewer-file-badge {
+  font-family: var(--mono, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 .viewer-report-title {
   min-width: 0;

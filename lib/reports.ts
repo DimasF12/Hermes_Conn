@@ -1,96 +1,109 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { BlobServiceClient } from '@azure/storage-blob';
 
-/** Folder tempat AI menaruh file laporan .html */
+/** Local folder fallback */
 export const REPORTS_DIR = path.join(process.cwd(), 'public', 'reports');
 
 export interface ReportEntry {
-  /** Nama file, contoh: "2026-10-02_sales-intelligence.html" */
+  /** Nama file, contoh: "2026-10-05.html" */
   file: string;
-  /** URL publik untuk iframe / download */
+  /** URL untuk iframe / preview */
   url: string;
-  /** Judul dari tag <title>, fallback ke nama file */
+  /** Judul dari nama file */
   title: string;
-  /** Tanggal edisi (YYYY-MM-DD) dari nama file, fallback ke tanggal modifikasi */
+  /** Tanggal edisi ISO (YYYY-MM-DD) */
   date: string;
+  /** Tanggal edisi terformat (misal: "5 October 2026") */
+  editionDate: string;
   /** Ukuran file dalam byte */
   size: number;
   /** Waktu terakhir file diubah (ISO) */
   updatedAt: string;
 }
 
-const DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
-const TITLE_TAG = /<title[^>]*>([\s\S]*?)<\/title>/i;
+import { formatReportDate } from './dateUtils';
+export { formatReportDate };
 
-/** Ambil isi <title> dari 4KB pertama file (cukup untuk <head>). */
-async function readTitle(filePath: string): Promise<string | null> {
-  const handle = await fs.open(filePath, 'r');
-  try {
-    const buffer = Buffer.alloc(4096);
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-    const match = buffer.subarray(0, bytesRead).toString('utf8').match(TITLE_TAG);
-    return match ? match[1].trim() : null;
-  } finally {
-    await handle.close();
-  }
-}
+const DATE_PATTERN = /(\d{4}-\d{2}-\d{2})/;
 
 function prettifyFileName(file: string): string {
-  return file
-    .replace(/\.html?$/i, '')
-    .replace(DATE_PREFIX, '')
-    .replace(/[_-]+/g, ' ')
-    .trim() || file;
+  const base = path.basename(file).replace(/\.html?$/i, '');
+  const dateMatch = base.match(DATE_PATTERN);
+  const remainder = dateMatch
+    ? base.replace(dateMatch[0], '').replace(/^[_-]+|[_-]+$/g, '')
+    : base;
+  return remainder
+    ? remainder.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : 'AI Sales Intelligence';
 }
 
-/** Scan folder laporan / Blob Storage dan kembalikan daftar edisi, terbaru di atas. */
+function getAzureContainerClient() {
+  const connStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  const account = process.env.AZURE_STORAGE_ACCOUNT;
+  const key = process.env.AZURE_STORAGE_KEY;
+  const containerName = process.env.AZURE_STORAGE_CONTAINER || 'gyssignal';
+
+  if (connStr) {
+    const serviceClient = BlobServiceClient.fromConnectionString(connStr);
+    return serviceClient.getContainerClient(containerName);
+  } else if (account && key) {
+    const serviceClient = new BlobServiceClient(
+      `https://${account}.blob.core.windows.net`,
+      undefined // credentials handled if SAS or connection string
+    );
+    return serviceClient.getContainerClient(containerName);
+  }
+  return null;
+}
+
+/**
+ * Scan laporan dari Azure Blob Storage (gyssignal/scheduled/sales-intelligence/clevel-html)
+ * dengan fallback otomatis ke folder lokal public/reports.
+ */
 export async function listReports(): Promise<ReportEntry[]> {
-  const containerUrl = process.env.REPORTS_BLOB_CONTAINER_URL?.replace(/\/$/, '');
-  const sas = process.env.REPORTS_BLOB_SAS?.replace(/^\?/, '');
+  const container = getAzureContainerClient();
+  const folder = (process.env.AZURE_STORAGE_FOLDER || 'scheduled/sales-intelligence/clevel-html').replace(/\/+$/, '');
 
-  if (containerUrl && sas) {
+  if (container) {
     try {
-      const res = await fetch(`${containerUrl}?restype=container&comp=list&${sas}`, { cache: 'no-store' });
-      if (res.ok) {
-        const xml = await res.text();
-        const blobMatches = [...xml.matchAll(/<Blob>([\s\S]*?)<\/Blob>/gi)];
-        const entries: ReportEntry[] = [];
+      const entries: ReportEntry[] = [];
+      for await (const blob of container.listBlobsFlat({ prefix: folder })) {
+        if (!/\.html?$/i.test(blob.name)) continue;
 
-        for (const m of blobMatches) {
-          const blobXml = m[1];
-          const name = blobXml.match(/<Name>([\s\S]*?)<\/Name>/i)?.[1]?.trim();
-          if (!name || !/\.html?$/i.test(name)) continue;
+        const fileName = path.basename(blob.name);
+        const dateMatch = fileName.match(DATE_PATTERN);
+        const date = dateMatch
+          ? dateMatch[1]
+          : (blob.properties.lastModified?.toISOString().slice(0, 10) ?? '');
 
-          const size = parseInt(blobXml.match(/<Content-Length>(\d+)<\/Content-Length>/i)?.[1] || '0', 10);
-          const lastMod = blobXml.match(/<Last-Modified>([\s\S]*?)<\/Last-Modified>/i)?.[1] || new Date().toISOString();
-          const date = name.match(DATE_PREFIX)?.[1] ?? new Date(lastMod).toISOString().slice(0, 10);
-
-          entries.push({
-            file: name,
-            url: `${containerUrl}/${encodeURIComponent(name)}?${sas}`,
-            title: prettifyFileName(name),
-            date,
-            size,
-            updatedAt: new Date(lastMod).toISOString(),
-          });
-        }
-
-        if (entries.length > 0) {
-          return entries.sort(
-            (a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
-          );
-        }
+        entries.push({
+          file: fileName,
+          url: `/api/reports/view?file=${encodeURIComponent(fileName)}`,
+          title: prettifyFileName(fileName),
+          date,
+          editionDate: formatReportDate(date, 'long'),
+          size: blob.properties.contentLength ?? 0,
+          updatedAt: blob.properties.lastModified?.toISOString() ?? new Date().toISOString(),
+        });
       }
-    } catch {
-      // Fallback to local public/reports on any network/config failure
+
+      if (entries.length > 0) {
+        return entries.sort(
+          (a, b) => b.date.localeCompare(a.date) || b.file.localeCompare(a.file)
+        );
+      }
+    } catch (err) {
+      console.error('Azure Blob listReports error, falling back to local:', err);
     }
   }
 
+  // Fallback to local public/reports folder
   let files: string[];
   try {
     files = await fs.readdir(REPORTS_DIR);
   } catch {
-    return []; // Folder belum ada = belum ada laporan
+    return [];
   }
 
   const htmlFiles = files.filter(f => /\.html?$/i.test(f));
@@ -99,22 +112,48 @@ export async function listReports(): Promise<ReportEntry[]> {
     htmlFiles.map(async (file): Promise<ReportEntry> => {
       const filePath = path.join(REPORTS_DIR, file);
       const stat = await fs.stat(filePath);
-      const title = (await readTitle(filePath)) || prettifyFileName(file);
-      const date = file.match(DATE_PREFIX)?.[1] ?? stat.mtime.toISOString().slice(0, 10);
+      const date = file.match(DATE_PATTERN)?.[1] ?? stat.mtime.toISOString().slice(0, 10);
 
       return {
         file,
-        url: `/reports/${encodeURIComponent(file)}`,
-        title,
+        url: `/api/reports/view?file=${encodeURIComponent(file)}`,
+        title: prettifyFileName(file),
         date,
+        editionDate: formatReportDate(date, 'long'),
         size: stat.size,
         updatedAt: stat.mtime.toISOString(),
       };
     })
   );
 
-  // Urutkan: tanggal edisi terbaru dulu, lalu waktu modifikasi terbaru
   return entries.sort(
-    (a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
+    (a, b) => b.date.localeCompare(a.date) || b.file.localeCompare(a.file)
   );
+}
+
+/**
+ * Ambil konten HTML laporan (dari Azure Blob atau lokal) untuk disajikan ke iframe.
+ */
+export async function getReportHtml(fileName: string): Promise<string | null> {
+  const sanitized = path.basename(fileName);
+  const container = getAzureContainerClient();
+  const folder = (process.env.AZURE_STORAGE_FOLDER || 'scheduled/sales-intelligence/clevel-html').replace(/\/+$/, '');
+
+  if (container) {
+    try {
+      const blobClient = container.getBlobClient(`${folder}/${sanitized}`);
+      const downloadRes = await blobClient.downloadToBuffer();
+      return downloadRes.toString('utf-8');
+    } catch {
+      // Fall through to local fallback
+    }
+  }
+
+  // Local fallback
+  try {
+    const filePath = path.join(REPORTS_DIR, sanitized);
+    return await fs.readFile(filePath, 'utf-8');
+  } catch {
+    return null;
+  }
 }

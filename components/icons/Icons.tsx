@@ -108,5 +108,10 @@ export const Icons: Record<string, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 4h13v16H6a2 2 0 0 1-2-2V4ZM17 8h3v10a2 2 0 0 1-2 2M8 8h5M8 12h5M8 16h3" />
     </svg>
+  ),
+  chevronDown: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
   )
 };

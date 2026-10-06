@@ -63,42 +63,6 @@ export function ReportTopbar({
           <span className={isRefreshing ? 'viewer-spin' : undefined}>{Icons.refresh}</span>
         </button>
 
-        <a
-          id="openReportNewTab"
-          className="btn btn-quiet icon-btn"
-          href={selectedReport?.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open in new tab"
-          aria-label="Open in new tab"
-          aria-disabled={!hasReport}
-        >
-          {Icons.external}
-        </a>
-
-        <a
-          id="downloadReport"
-          className="btn btn-quiet icon-btn"
-          href={selectedReport?.url}
-          download={selectedReport?.file}
-          title="Download HTML report"
-          aria-label="Download HTML report"
-          aria-disabled={!hasReport}
-        >
-          {Icons.download}
-        </a>
-
-        <button
-          id="printReport"
-          className="btn btn-quiet icon-btn"
-          onClick={onPrint}
-          disabled={!hasReport}
-          title="Print / Save as PDF"
-          aria-label="Print or save as PDF"
-        >
-          {Icons.printer}
-        </button>
-
         <button
           id="fullscreenReport"
           className="btn btn-primary"
